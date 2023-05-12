@@ -7,18 +7,18 @@ jest.mock('axios');
 
 let server;
 
-beforeAll(() => {
+beforeAll((done) => { // add done callback
     const app = express();
     app.use('/', router);
     server = http.createServer(app);
-    server.listen();
+    server.listen(done); // pass done callback to listen
 });
 
 afterAll((done) => {
     server.close(done);
 });
 
-it('should fetch mangas', async () => {
+it('should fetch mangas', (done) => { // remove async, add done callback
     axios.get.mockResolvedValue({
         data: {
             data: [], // mock response
@@ -46,7 +46,13 @@ it('should fetch mangas', async () => {
             // Assert the response here
             expect(response).toEqual({ mangas: [] });
 
-            done();
+            done(); // Call the done callback here
         });
+    });
+
+    req.on('error', (err) => {
+        // Handle error here
+        console.log(err);
+        done(err);
     });
 });
