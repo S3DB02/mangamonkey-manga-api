@@ -1,61 +1,57 @@
-const axios = require('axios');
-const http = require('http');
 const express = require('express');
+const supertest = require('supertest');
+const axios = require('axios');
 const router = require('../routes/manga'); // replace with the path to your router
 
 jest.mock('axios');
 
-let server;
+const app = express();
+app.use('/', router);
+const request = supertest(app);
 
-beforeAll((done) => { // add done callback
-    const app = express();
-    app.use('/', router);
-    server = http.createServer(app);
-    server.listen(done); // pass done callback to listen
-});
+describe("Get Manga", () => {
+    it('should return a status 200 and the correct data structure', async () => {
+        const mockResponse = {
+            data: {
+                data: [
+                    // Mock response
+                    {
+                        id: "1",
+                        attributes: {
+                            title: { en: "Mock Title" },
+                            tags: [
+                                {
+                                    attributes: {
+                                        group: 'genre',
+                                        name: { en: "Mock Genre" },
+                                    },
+                                },
+                            ],
+                        },
+                        relationships: [
+                            {
+                                type: "cover_art",
+                                attributes: {
+                                    fileName: "MockFileName.jpg",
+                                },
+                            },
+                        ],
+                    },
+                ]
+            }
+        };
 
-afterAll((done) => {
-    server.close(done);
-});
+        axios.get.mockResolvedValue(mockResponse);
 
-it('should fetch mangas', (done) => { // remove async, add done callback
-    axios.get.mockResolvedValue({
-        status: 200,
-        data: {
-            data: [], // mock response
-        },
+        const response = await request.get('/'); // your endpoint
+
+        expect(response.statusCode).toBe(200);
+        expect(Array.isArray(response.body.mangas)).toBe(true);
+        // Add more assertions as needed
     });
 
-    const options = {
-        hostname: 'localhost',
-        port: server.address().port,
-        method: 'GET',
-    };
-
-    const req = http.request(options);
-    req.end();
-
-    req.on('response', (res) => {
-        expect(res.statusCode).toEqual(200); // Assert the status code here
-
-        let chunks = [];
-
-        res.on('data', (chunk) => chunks.push(chunk));
-
-        res.on('end', () => {
-            const body = Buffer.concat(chunks).toString();
-            const response = JSON.parse(body);
-
-            // Assert the response here
-            expect(response).toHaveProperty('mangas');
-
-            done(); // Call the done callback here
-        });
-    });
-
-    req.on('error', (err) => {
-        // Handle error here
-        console.log(err);
-        done(err);
+    afterEach(() => {
+        // Cleaning up the mess left behind the previous test
+        axios.get.mockClear();
     });
 });
